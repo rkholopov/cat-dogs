@@ -1,0 +1,14 @@
+# Local Python environment
+/.venv/
+
+# Dataset and generated model files
+/data/
+/artifacts/
+
+# Editor settings and Python caches
+/.idea/
+__pycache__/
+*.py[cod]
+
+# Local secrets
+.env
