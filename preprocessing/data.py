@@ -16,7 +16,6 @@ def to_normalized_tensor(image):
 
 
 def create_dataset(folder, training=False):
-    # Получаем квадрат 256×256 без растягивания пропорций исходной фотографии.
     operations = [
         transforms.Resize(256, antialias=True),
         transforms.CenterCrop(256),

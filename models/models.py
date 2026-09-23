@@ -6,7 +6,6 @@ class SmallCNN(nn.Module):
     def __init__(self):
         super().__init__()
 
-        # Каждый блок ищет признаки и вдвое уменьшает размер изображения.
         self.features = nn.Sequential(
             nn.Conv2d(3, 16, kernel_size=3, padding=1),
             nn.ReLU(),

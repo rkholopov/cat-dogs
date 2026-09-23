@@ -6,7 +6,6 @@ from pathlib import Path
 import torch
 from torch.utils.data import DataLoader
 
-# Позволяет запускать файл напрямую, в том числе кнопкой Run в PyCharm.
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if __package__ in (None, ""):
     sys.path.insert(0, str(PROJECT_ROOT))
@@ -17,12 +16,10 @@ from models.models import create_model
 
 def evaluate(model, loader, device):
     model.eval()
-    # Строки — настоящие классы, столбцы — предсказанные. Порядок: cats, dogs.
     matrix = [[0, 0], [0, 0]]
 
     with torch.no_grad():
         for images, labels in loader:
-            # Одна центральная область на фотографию. Для выбора класса Softmax не нужен.
             predictions = model(images.to(device)).argmax(dim=1).cpu()
             for actual, predicted in zip(labels.tolist(), predictions.tolist()):
                 matrix[actual][predicted] += 1
@@ -63,7 +60,6 @@ def main():
         raise ValueError("Классы тестовой выборки отличаются от классов при обучении")
     loader = DataLoader(dataset, batch_size=args.batch_size, shuffle=False, num_workers=0)
 
-    # Веса уже есть в checkpoint, повторно скачивать ImageNet не нужно.
     model = create_model(checkpoint["model_name"])
     model.load_state_dict(checkpoint["model_state_dict"])
     model.to(device)
