@@ -6,6 +6,7 @@ from pathlib import Path
 
 
 def plan_split(source, seed):
+    # Класс берем из начала имени файла: cat. или dog.
     groups = {"cats": [], "dogs": []}
     for path in sorted(source.iterdir()):
         if not path.is_file():
@@ -23,8 +24,12 @@ def plan_split(source, seed):
         rng.shuffle(paths)
         boundary = len(paths) * 80 // 100
         print(f"{label}: train={boundary}, test={len(paths) - boundary}")
-        rows.extend((path, "train" if i < boundary else "test", label)
-                    for i, path in enumerate(paths))
+        for index, path in enumerate(paths):
+            if index < boundary:
+                split = "train"
+            else:
+                split = "test"
+            rows.append((path, split, label))
     return rows
 
 
@@ -58,11 +63,13 @@ def main():
         for label in ("cats", "dogs"):
             (output / split / label).mkdir(parents=True)
     for path, split, label in rows:
+        # Копируем файл: фотография в исходной папке остается на месте.
         shutil.copy2(path, output / split / label / path.name)
     with (output / "split.csv").open("w", newline="", encoding="utf-8") as stream:
         writer = csv.writer(stream)
         writer.writerow(("filename", "split", "class", "seed"))
-        writer.writerows((p.name, s, label, args.seed) for p, s, label in rows)
+        for path, split, label in rows:
+            writer.writerow((path.name, split, label, args.seed))
     print(f"Copied {len(rows)} images. Original files unchanged.")
 
 
