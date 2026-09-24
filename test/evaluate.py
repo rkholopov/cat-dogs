@@ -10,7 +10,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if __package__ in (None, ""):
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from preprocessing.data import create_dataset
+from preprocessing.transform import create_dataset
 from models.models import create_model
 
 
