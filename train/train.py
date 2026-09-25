@@ -6,6 +6,7 @@ from pathlib import Path
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
+from torchvision.models.resnet import ResNet
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if __package__ in (None, ""):
@@ -17,6 +18,9 @@ from models.models import create_model
 
 def train_one_epoch(model, loader, optimizer, device):
     model.train()
+    if isinstance(model, ResNet):
+        model.eval()
+        model.fc.train()
     loss_function = nn.CrossEntropyLoss()
     total_loss = 0.0
     correct = 0
@@ -42,7 +46,7 @@ def train_one_epoch(model, loader, optimizer, device):
 def main():
     project_folder = PROJECT_ROOT
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--model", choices=["cnn", "alexnet"])
+    parser.add_argument("--model", choices=["cnn", "alexnet", "resnet18"])
     parser.add_argument("--epochs", type=int, default=10)
     parser.add_argument("--batch-size", type=int)
     parser.add_argument("--data-dir", type=Path, default=project_folder / "data")
@@ -95,6 +99,8 @@ def main():
         optimizer = torch.optim.AdamW(
             model.classifier.parameters(), lr=0.0001, weight_decay=0.0001,
         )
+    elif args.model == "resnet18":
+        optimizer = torch.optim.AdamW(model.fc.parameters(), lr=0.001, weight_decay=0.0001)
     else:
         optimizer = torch.optim.AdamW(model.parameters(), lr=0.001, weight_decay=0.0001)
 

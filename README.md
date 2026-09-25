@@ -1,6 +1,6 @@
 # Cats vs Dogs
 
-Классификация фотографий кошек и собак на PyTorch: собственная CNN и предобученный AlexNet с замороженными сверточными слоями. Готовые веса в репозиторий не включены.
+Классификация фотографий кошек и собак на PyTorch: собственная CNN, предобученные AlexNet и ResNet18 с замороженными сверточными слоями. Готовые веса в репозиторий не включены.
 
 ## Структура проекта
 
@@ -12,7 +12,8 @@ cat-dogs/
 │   └── transform.py
 ├── models/
 │   ├── __init__.py
-│   └── models.py
+│   ├── models.py
+│   └── resnet.py
 ├── train/
 │   ├── __init__.py
 │   └── train.py
@@ -43,7 +44,8 @@ cat-dogs/
 |---|---|
 | `preprocessing/train_test_split.py` | Определяет класс по имени JPG, копирует фотографии в train/test 80/20 и записывает состав разбиения в `split.csv`. |
 | `preprocessing/transform.py` | Загружает изображения в RGB, выполняет кадрирование, аугментации и нормализацию. Создает `ImageFolder`, общий для обучения и оценки. |
-| `models/models.py` | Описывает собственную CNN и создает AlexNet с двумя выходами и замороженными свертками. |
+| `models/models.py` | Описывает собственную CNN и предоставляет `create_model` для выбора CNN, AlexNet или ResNet18. |
+| `models/resnet.py` | Создает ResNet18 с весами ImageNet, замораживает основную сеть и заменяет `fc` на слой с двумя выходами. |
 | `train/train.py` | Обучает модель, сохраняет checkpoint после каждой эпохи, ведет историю и возобновляет обучение через `--resume`. |
 | `test/evaluate.py` | Загружает веса, оценивает модель на test и записывает метрики. Не обновляет параметры модели. |
 | `__init__.py` | Обозначает папки с кодом как пакеты Python для импорта и запуска через `python -m`. |
@@ -119,16 +121,20 @@ data/
 ```text
 python train/train.py --model cnn --epochs 10 --output-dir artifacts/cnn_run1
 python train/train.py --model alexnet --epochs 10 --output-dir artifacts/alexnet_run1
+python train/train.py --model resnet18 --epochs 10 --output-dir artifacts/resnet18_run1
 ```
 
 | Модель | Обучаемые слои | Learning rate |
 |---|---|---|
 | CNN | Все слои, с нуля | 0.001 |
 | AlexNet | Все три полносвязных слоя; свертки заморожены | 0.0001 |
+| ResNet18 | Только последний слой `fc`; остальная сеть заморожена | 0.001 |
 
-AlexNet загружает веса ImageNet при первом запуске; требуется интернет. Последний слой заменяется на два выхода. Обе модели используют CrossEntropyLoss и AdamW с weight decay 0.0001.
+AlexNet и ResNet18 загружают веса ImageNet при первом запуске; требуется интернет. Последний слой заменяется на два выхода. Все модели используют CrossEntropyLoss и AdamW с weight decay 0.0001.
 
-Параметры: `--model`, `--epochs`, `--resume`, `--batch-size` (по умолчанию 32), `--data-dir` (по умолчанию `data`), `--output-dir` (по умолчанию `artifacts/cnn` или `artifacts/alexnet`). При нехватке памяти уменьшите `--batch-size`. Для каждого нового запуска укажите новую папку результатов.
+В ResNet18 используется `ResNet18_Weights.IMAGENET1K_V1`. Во время обучения основная сеть остается в режиме `eval()`: статистики BatchNorm не обновляются. Общая обработка RGB 224×224 и нормализация ImageNet используются для всех моделей.
+
+Параметры: `--model` (`cnn`, `alexnet`, `resnet18`), `--epochs`, `--resume`, `--batch-size` (по умолчанию 32), `--data-dir` (по умолчанию `data`), `--output-dir` (по умолчанию `artifacts/<название модели>`). При нехватке памяти уменьшите `--batch-size`. Для каждого нового запуска укажите новую папку результатов.
 
 После каждой эпохи сохраняются:
 
@@ -140,11 +146,12 @@ AlexNet загружает веса ImageNet при первом запуске;
 ```text
 python train/train.py --resume artifacts/cnn_run1/last.pt --epochs 20
 python train/train.py --resume artifacts/alexnet_run1/last.pt --epochs 20
+python train/train.py --resume artifacts/resnet18_run1/last.pt --epochs 20
 ```
 
 `--epochs` задает **общее число эпох**, включая уже завершенные. Если checkpoint сохранен после 10-й эпохи, команда продолжит обучение с 11-й до 20-й. Значение должно быть больше номера сохраненной эпохи.
 
-Из checkpoint восстанавливаются модель, оптимизатор AdamW (включая learning rate), история и состояния генераторов случайных чисел PyTorch. Свертки AlexNet остаются замороженными. Повторно скачивать веса ImageNet для возобновления не нужно.
+Из checkpoint восстанавливаются модель, оптимизатор AdamW (включая learning rate), история и состояния генераторов случайных чисел PyTorch. Свертки AlexNet и ResNet18 остаются замороженными; статистики BatchNorm у ResNet18 также фиксированы. Повторно скачивать веса ImageNet для возобновления не нужно.
 
 `--model` указывать не требуется: название берется из checkpoint. Если указать другую модель, запуск завершится с ошибкой. Batch size также восстанавливается; его можно переопределить через `--batch-size`, например при нехватке памяти.
 
@@ -165,10 +172,11 @@ Checkpoint записывается после завершения эпохи. 
 ```text
 python test/evaluate.py --checkpoint artifacts/cnn_run1/last.pt
 python test/evaluate.py --checkpoint artifacts/alexnet_run1/last.pt
+python test/evaluate.py --checkpoint artifacts/resnet18_run1/last.pt
 ```
 
 Дополнительные параметры: `--data-dir` и `--batch-size`. Рядом с checkpoint записывается `metrics.json`: accuracy, macro F1, матрица ошибок, число тестовых изображений, модель и эпоха. Повторная оценка перезаписывает этот файл. Строки матрицы — настоящие классы, столбцы — предсказанные; порядок: `cats`, `dogs`.
 
-Обучение использует только train. Валидации, early stopping и выбора лучшей эпохи нет: число эпох задается заранее, test используется для итоговой оценки обеих моделей на одинаковых данных.
+Обучение использует только train. Валидации, early stopping и выбора лучшей эпохи нет: число эпох задается заранее, test используется для итоговой оценки моделей на одинаковых данных.
 
 Поддерживается также запуск `python -m train.train` и `python -m test.evaluate`. В PyCharm выберите соответствующий файл, интерпретатор `.venv`, корень проекта как рабочую папку и передайте те же параметры запуска.

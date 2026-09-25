@@ -1,5 +1,6 @@
 from torch import nn
 from torchvision.models import AlexNet_Weights, alexnet
+from models.resnet import create_resnet18
 
 
 class SmallCNN(nn.Module):
@@ -36,6 +37,9 @@ class SmallCNN(nn.Module):
 
 
 def create_model(name, pretrained=False):
+    if name == "resnet18":
+        return create_resnet18(pretrained)
+
     if name == "cnn":
         return SmallCNN()
 
