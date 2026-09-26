@@ -2,6 +2,32 @@
 
 Классификация фотографий кошек и собак на PyTorch: собственная CNN, предобученные AlexNet и ResNet18 с замороженными сверточными слоями. Готовые веса в репозиторий не включены.
 
+## Quick Start
+
+Для запуска интерфейса нужны Python 3.12, Git и один файл обученной модели. Датасет и обучение не требуются. Команды ниже — для Windows PowerShell; установка на Linux/macOS описана в разделе [«Установка»](#установка).
+
+1. Склонируйте проект, создайте окружение и установите зависимости для CPU:
+
+   ```powershell
+   git clone https://github.com/rkholopov/cat-dogs.git
+   cd cat-dogs
+   py -3.12 -m venv .venv
+   .\.venv\Scripts\python.exe -m pip install --upgrade pip
+   .\.venv\Scripts\python.exe -m pip install torch==2.8.0 torchvision==0.23.0 --index-url https://download.pytorch.org/whl/cpu
+   .\.venv\Scripts\python.exe -m pip install -r requirements.txt
+   New-Item -ItemType Directory -Force artifacts
+   ```
+
+2. Скачайте `resnet18.pt` из **Assets** в [GitHub Releases](https://github.com/rkholopov/cat-dogs/releases) и положите в `artifacts`, чтобы получился путь `artifacts/resnet18.pt`. Доступность релиза и другие модели описаны в разделе [«Готовые модели»](#готовые-модели).
+
+3. Запустите интерфейс:
+
+   ```powershell
+   .\.venv\Scripts\python.exe -m streamlit run frontend/app.py
+   ```
+
+4. Откройте адрес из терминала (обычно `http://localhost:8501`), загрузите фотографию, выберите модель и нажмите **«Распознать»**.
+
 ## Структура проекта
 
 ```text
@@ -188,6 +214,28 @@ python test/evaluate.py --checkpoint artifacts/resnet18_run1/last.pt
 Обучение использует только train. Валидации, early stopping и выбора лучшей эпохи нет: число эпох задается заранее, test используется для итоговой оценки моделей на одинаковых данных.
 
 Поддерживается также запуск `python -m train.train` и `python -m test.evaluate`. В PyCharm выберите соответствующий файл, интерпретатор `.venv`, корень проекта как рабочую папку и передайте те же параметры запуска.
+
+## Готовые модели
+
+Файлы обученных моделей распространяются отдельно от кода через [GitHub Releases](https://github.com/rkholopov/cat-dogs/releases). Релиз `v1.0.0` подготовлен к публикации; до его публикации файлы в Assets недоступны.
+
+После публикации скачайте из Assets хотя бы один файл: `resnet18.pt`, `alexnet.pt` или `cnn.pt`. Поместите его в папку `artifacts` в корне проекта (создайте папку, если ее нет). Распаковывать `.pt` не нужно.
+
+| Файл | Эпохи | Test accuracy | Macro F1 |
+|---|---:|---:|---:|
+| `resnet18.pt` | 2 | 98,35% | 0,9835 |
+| `alexnet.pt` | 10 | 96,74% | 0,9674 |
+| `cnn.pt` | 30 | 90,28% | 0,9028 |
+
+Метрики получены на одной тестовой выборке из 1995 изображений. Для первого запуска рекомендуется ResNet18.
+
+Установите зависимости по разделу «Установка», затем запустите:
+
+```text
+python -m streamlit run frontend/app.py
+```
+
+Выберите скачанный файл в интерфейсе. Датасет и самостоятельное обучение для этого не нужны. Веса из релиза подходят для предсказания и оценки, но не для `--resume`: состояние оптимизатора в них отсутствует. Для продолжения своего обучения используйте исходный `last.pt`.
 
 ## Интерфейс
 
